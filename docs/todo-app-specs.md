@@ -112,6 +112,11 @@ What we chose, in one or two sentences. Be specific (technologies, boundaries, i
 | [0001](./0001-client-server-multi-user-architecture.md) | Client–server architecture for multi-user todo data | Accepted |
 | [0002](./0002-security-architecture.md) | Layered security architecture | Accepted |
 | [0003](./0003-mysql-relational-database.md) | MySQL relational database | Accepted |
+| [0004](./0004-vue-frontend-framework.md) | Vue 3 as the frontend framework | Accepted |
+| [0005](./0005-vuetify-ui-library.md) | Vuetify 4 as the UI component library | Accepted |
+| [0006](./0006-node-express-api.md) | Node.js and Express as the API runtime | Accepted |
+| [0007](./0007-rest-json-api.md) | REST and flat JSON as the API style | Accepted |
+| [0008](./0008-sequelize-orm.md) | Sequelize as the Node ORM | Accepted |
 
 <div style="page-break-after: always;"></div>
 
@@ -195,7 +200,7 @@ router guards (UI)                   controllers + auth helpers    lists, todos
 
 ## Related artifacts
 
-- ADRs: [ADR-0002 — Layered security architecture](./0002-security-architecture.md), [ADR-0003 — MySQL relational database](./0003-mysql-relational-database.md)
+- ADRs: [ADR-0002 — Layered security architecture](./0002-security-architecture.md), [ADR-0003 — MySQL relational database](./0003-mysql-relational-database.md), [ADR-0004 — Vue 3 as the frontend framework](./0004-vue-frontend-framework.md), [ADR-0006 — Node.js and Express as the API runtime](./0006-node-express-api.md), [ADR-0007 — REST and flat JSON](./0007-rest-json-api.md)
 - C4 diagrams: [docs/arch_diagrams/](../arch_diagrams/README.md) (context, container, component)
 - Feature specs: [Feature 1 — User Authentication](../../features/feature-1-user-auth.md) (identity foundation); Features 2–3 (list/todo isolation)
 - Cursor rules: [auth-patterns.mdc](../../.cursor/rules/auth-patterns.mdc), [security.mdc](../../.cursor/rules/security.mdc), [frontend-services.mdc](../../.cursor/rules/frontend-services.mdc), [project-structure.mdc](../../.cursor/rules/project-structure.mdc)
@@ -351,7 +356,7 @@ Documented deferrals — not security holes by omission in the teaching model, b
 
 ## Related artifacts
 
-- ADRs: [ADR-0001 — Client–server multi-user architecture](./0001-client-server-multi-user-architecture.md)
+- ADRs: [ADR-0001 — Client–server multi-user architecture](./0001-client-server-multi-user-architecture.md), [ADR-0006 — Node.js and Express](./0006-node-express-api.md)
 - Feature specs: [Feature 1](../../features/feature-1-user-auth.md) (auth); [Features 2–3](../../features/feature-2-todo-list-management.md) (list/todo isolation); [Feature 4](../../features/feature-4-user-profile-management.md) (profile scope)
 - Cursor rules: [security.mdc](../../.cursor/rules/security.mdc), [auth-patterns.mdc](../../.cursor/rules/auth-patterns.mdc), [frontend-services.mdc](../../.cursor/rules/frontend-services.mdc)
 - Implementation: `backend/app/authorization/authorization.js`
@@ -383,7 +388,7 @@ The stack must work on developer laptops (often XAMPP with MySQL already install
 
 ## Decision
 
-Use **MySQL** as the production database with **Sequelize 6** as the ORM and **relational, normalized tables** scoped by `userId` foreign keys.
+Use **MySQL** as the production database with **Sequelize 6** as the ORM ([ADR-0008](./0008-sequelize-orm.md)) and **relational, normalized tables** scoped by `userId` foreign keys.
 
 ### Stack
 
@@ -471,18 +476,453 @@ No checked-in Sequelize migration files in v1 — schema is defined in `backend/
 | **PostgreSQL** | Excellent choice for production; less universal in XAMPP/LAMP developer environments for this course. |
 | **MongoDB / document store** | Todo-in-list fits poorly without duplicating ownership; cross-user isolation harder to reason about in specs. |
 | **JSON files / in-memory store** | No real multi-user persistence; fails ADR-0001. |
-| **Prisma** | Viable ORM; Sequelize already wired in rules, models, and course materials. |
-| **Raw SQL only (no ORM)** | More boilerplate; Sequelize matches constitution stack consistency. |
+| **Prisma** | Viable ORM; rejected for Speckit in [ADR-0008](./0008-sequelize-orm.md) — Sequelize is the course standard. |
+| **Raw SQL only (no ORM)** | More boilerplate; see ADR-0008. |
 | **Single shared DB for dev and test** | Risk of wiping developer data when tests run `force: true`. |
 
 ## Related artifacts
 
-- ADRs: [ADR-0001](./0001-client-server-multi-user-architecture.md), [ADR-0002](./0002-security-architecture.md)
+- ADRs: [ADR-0001](./0001-client-server-multi-user-architecture.md), [ADR-0002](./0002-security-architecture.md), [ADR-0006](./0006-node-express-api.md), [ADR-0008](./0008-sequelize-orm.md)
 - Reference: [data-model.md](../../features/reference/data-model.md)
 - Cursor rules: [api-conventions.mdc](../../.cursor/rules/api-conventions.mdc), [project-structure.mdc](../../.cursor/rules/project-structure.mdc)
 - Config: `backend/app/config/db.config.js`, `backend/.env.example`, `backend/.env.test.example`
 - Models: `backend/app/models/`
 - Tests: `backend/tests/helpers.js` (`syncTestDatabase`, `resetTestDatabase`)
+
+<div style="page-break-after: always;"></div>
+
+<!-- source: docs/adr/0004-vue-frontend-framework.md -->
+
+# 0004-vue-frontend-framework.md
+
+# ADR-0004: Vue 3 as the frontend framework
+
+**Status:** Accepted  
+**Date:** 2026-08-26  
+**Deciders:** OC CS Speckit project (SDD kit; Todo example application)
+
+## Context
+
+[ADR-0001](./0001-client-server-multi-user-architecture.md) establishes a **client–server** Todo example: a browser SPA talks to an Express REST API. We still needed an explicit choice of **SPA framework** for Speckit’s frontend shell (starter kit and Todo answer key).
+
+Constraints for the kit:
+
+1. **Teachable SDD** — students and Cursor agents must map Screen Requirements to a small, consistent set of files (`views/`, `components/`, `services/`).
+2. **Course-aligned stack** — OC CS materials and prior Vue coursework should transfer; avoid introducing a second major UI paradigm.
+3. **Component UI library** — Speckit standardizes on **Vuetify 4** ([ADR-0005](./0005-vuetify-ui-library.md); see `ui-style-system.mdc`); the framework must integrate cleanly with that library.
+4. **SPA + Vite** — client-side routing, axios services, and Vitest + `@vue/test-utils` for Gherkin-backed UI tests.
+5. **Agent-friendly** — clear Options/Composition API patterns and a stable directory layout encoded in Cursor rules.
+
+Choosing React, Svelte, or Angular would force a different component library, test stack, and rewrite of frontend rules — without improving the SDD teaching goals.
+
+## Decision
+
+Adopt **Vue 3** (with **Vite**) as the SPA framework for OC CS Speckit:
+
+| Concern | Choice |
+|---------|--------|
+| **Framework** | Vue 3 (ES modules) |
+| **Build / dev** | Vite (dev port **8082**) |
+| **UI kit** | Vuetify 4 |
+| **Routing** | `vue-router` with `beforeEach` guards for auth UX |
+| **HTTP** | axios via `frontend/src/services/` (`*Services.js`) — no axios in views |
+| **Tests** | Vitest + `@vue/test-utils` |
+| **Layout** | `frontend/src/views/`, `components/`, `services/`, `plugins/` (see `project-structure.mdc`) |
+
+```text
+features/ Screen Requirements
+        │
+        ▼
+frontend/src/views/*.vue  ←── services/*Services.js  ←── axios ──► Express /todo/
+        │
+        └── components/ + Vuetify 4 (ui-style-system.mdc)
+```
+
+**Invariants:**
+
+1. Product UI lives under `frontend/` as a Vue SPA — not server-rendered HTML as the primary UI.
+2. Views call **services**, not raw axios (constitution / `frontend-services.mdc`).
+3. Stack deviations (e.g. React, Tailwind as primary system) require a new ADR and rule updates — not ad-hoc feature code.
+
+## Consequences
+
+### Positive
+
+- Aligns with OC CS Vue teaching path and existing Speckit Cursor rules (`ui-style-system`, `frontend-services`).
+- Vuetify 4 is first-class for Vue 3; Screen Requirements can name Vuetify patterns without inventing a design system.
+- Vite keeps local DX simple (fast HMR, clear env split for API base URL).
+- Vitest + Vue Test Utils match Gherkin scenarios for Login, Dashboard, etc.
+- Starter-kit overlay can ship a thin Vue shell (`App.vue`, `Home.vue`, router) that features extend incrementally.
+
+### Negative / tradeoffs
+
+- Students who only know React must learn Vue idioms (or reverse for other courses).
+- Vue ecosystem choices (Composition vs Options API, pinia vs local state) still need course guidance — Speckit prefers patterns already in rules/specs, not every Vue plugin.
+- SSR / Nuxt is out of scope; SEO and first-paint for a public marketing site are not goals of this kit.
+
+## Alternatives considered
+
+| Option | Why not |
+|--------|---------|
+| **React + Vite** | Strong ecosystem, but breaks Vuetify-first UI rules and OC CS Vue continuity; would require rewriting frontend rules and starter shell. |
+| **Angular** | Heavier framework and tooling for a small Todo/SPA teaching kit; steeper curve for feature-by-feature SDD slices. |
+| **Svelte / Solid** | Excellent DX, but weaker match to course materials and Vuetify; fewer shared patterns in OC CS Speckit docs. |
+| **Plain JS / jQuery SPA** | Insufficient structure for services layer, router guards, and Vitest component tests tied to Gherkin. |
+| **Nuxt / Vue SSR** | Extra deployment and auth complexity; ADR-0001 targets a Vite SPA talking to Express. |
+
+## Related artifacts
+
+- ADRs: [ADR-0001 — Client–server multi-user architecture](./0001-client-server-multi-user-architecture.md), [ADR-0005 — Vuetify 4 as the UI component library](./0005-vuetify-ui-library.md)
+- Cursor rules: [project-structure.mdc](../../.cursor/rules/project-structure.mdc), [frontend-services.mdc](../../.cursor/rules/frontend-services.mdc), [ui-style-system.mdc](../../.cursor/rules/ui-style-system.mdc), [constitution.mdc](../../.cursor/rules/constitution.mdc) (Principle 5 — stack consistency)
+- Features: [Feature 1 — User Authentication](../../features/feature-1-user-auth.md) (first Vue screens); Features 2–5 (Dashboard, profile, due dates)
+- C4: [docs/arch_diagrams/](../arch_diagrams/README.md) (frontend container / components)
+- Starter kit: [docs/STARTER-KIT.md](../STARTER-KIT.md) (empty Vue shell in overlay)
+
+<div style="page-break-after: always;"></div>
+
+<!-- source: docs/adr/0005-vuetify-ui-library.md -->
+
+# 0005-vuetify-ui-library.md
+
+# ADR-0005: Vuetify 4 as the UI component library
+
+**Status:** Accepted  
+**Date:** 2026-08-26  
+**Deciders:** OC CS Speckit project (SDD kit; Todo example application)
+
+## Context
+
+[ADR-0004](./0004-vue-frontend-framework.md) selects **Vue 3 + Vite** for the Speckit SPA. Feature Screen Requirements still need a **single component and theming system** so students and Cursor agents do not invent ad-hoc CSS, Tailwind utilities, or mixed UI kits per feature.
+
+Constraints:
+
+1. **One design system** — Screen Requirements can name layouts, dialogs, forms, and buttons in a shared vocabulary.
+2. **Vue 3 native** — Material-style components that integrate with Vite and `<script setup>`.
+3. **Academic brand** — OC maroon / academic tokens live in one place (`plugins/vuetify.js`); views use theme names, not scattered hex.
+4. **Agent guardrails** — Cursor rules must be able to say “Vuetify only” without debating CSS frameworks every prompt.
+5. **Teachable forms & dialogs** — Login, Register, Dashboard list/todo CRUD, and profile flows need dialogs, text fields, and navigation chrome out of the box.
+
+Without a fixed UI library, Feature 1–5 specs would either over-specify CSS or accept inconsistent UIs that fail visual and testing conventions.
+
+## Decision
+
+Adopt **Vuetify 4** as the **only** primary UI component library for OC CS Speckit frontends:
+
+| Concern | Choice |
+|---------|--------|
+| **Library** | Vuetify 4 |
+| **Plugin** | `vite-plugin-vuetify` (`autoImport: false` — explicit imports as required by course rules) |
+| **Icons** | `@mdi/font` |
+| **Theme** | Light theme tokens in `frontend/src/plugins/vuetify.js` (OC Academic Edition — primary maroon `#801328`, Inter font) |
+| **Encoding** | [ui-style-system.mdc](../../.cursor/rules/ui-style-system.mdc) — Vuetify only; **no Tailwind** as the design system |
+| **API style** | Vue 3 `<script setup>` exclusively |
+
+```text
+Screen Requirements (features/)
+        │
+        ▼
+views / components  ──►  Vuetify 4 components (v-btn, v-dialog, v-text-field, …)
+        │
+        └── theme colors / typography from plugins/vuetify.js
+```
+
+**Invariants:**
+
+1. Product UI uses Vuetify components and theme tokens — not Tailwind utility classes as the primary styling approach.
+2. Brand hex values live **only** in `plugins/vuetify.js`; views use Vuetify color names / CSS variables.
+3. Replacing Vuetify (or adding a second competing UI kit) requires a new ADR and updates to `ui-style-system.mdc`.
+
+## Consequences
+
+### Positive
+
+- Screen Requirements can reference familiar Vuetify patterns (forms, `v-dialog`, app bars) without inventing a custom kit.
+- One theme file keeps OC Academic branding consistent across Login, Dashboard, and MenuBar.
+- Cursor agents get a hard “Vuetify only / no Tailwind” rule, reducing stack thrash.
+- Matches Vue 3 + Vite choice (ADR-0004) and existing starter-kit / Todo shells.
+
+### Negative / tradeoffs
+
+- Bundle size and Material look are heavier than a minimal custom CSS approach.
+- Students must learn Vuetify APIs (props, density, slots) in addition to Vue.
+- Strict “no Tailwind” means utility-first habits from other courses do not transfer; occasional scoped CSS is fine for layout tweaks, not a second design system.
+- Vuetify major upgrades (3 → 4 already taken) can require coordinated rule and view updates.
+
+## Alternatives considered
+
+| Option | Why not |
+|--------|---------|
+| **Tailwind CSS (+ Headless UI)** | Flexible, but no single component contract for Screen Requirements; conflicts with Speckit’s “no Tailwind” academic edition rule and invites one-off styling. |
+| **PrimeVue / Quasar** | Capable Vue libraries, but not the OC Speckit / course standard; would fork docs and agent rules. |
+| **Naive UI / Element Plus** | Strong Vue 3 kits; same problem — second ecosystem without course alignment. |
+| **Custom CSS / BEM only** | Too slow for feature-by-feature SDD; agents and students reinvent dialogs/forms inconsistently. |
+| **Bootstrap Vue** | Aging fit for Vue 3 + Vite teaching path; weaker Material/academic token story for this kit. |
+
+## Related artifacts
+
+- ADRs: [ADR-0004 — Vue 3 as the frontend framework](./0004-vue-frontend-framework.md), [ADR-0001 — Client–server multi-user architecture](./0001-client-server-multi-user-architecture.md)
+- Cursor rules: [ui-style-system.mdc](../../.cursor/rules/ui-style-system.mdc), [frontend-services.mdc](../../.cursor/rules/frontend-services.mdc), [constitution.mdc](../../.cursor/rules/constitution.mdc) (Principle 5)
+- Implementation: `frontend/src/plugins/vuetify.js`, Feature 1–5 Screen Requirements
+- Starter kit: [docs/STARTER-KIT.md](../STARTER-KIT.md) (Vuetify-enabled Vue shell)
+
+<div style="page-break-after: always;"></div>
+
+<!-- source: docs/adr/0006-node-express-api.md -->
+
+# 0006-node-express-api.md
+
+# ADR-0006: Node.js and Express as the API runtime
+
+**Status:** Accepted  
+**Date:** 2026-08-26  
+**Deciders:** OC CS Speckit project (SDD kit; Todo example application)
+
+## Context
+
+[ADR-0001](./0001-client-server-multi-user-architecture.md) requires a **server-side REST API** as the source of truth for multi-user Todo data. [ADR-0003](./0003-mysql-relational-database.md) selects MySQL + Sequelize. We still needed an explicit choice of **runtime and HTTP framework** for Speckit’s `backend/` shell (starter kit and Todo answer key).
+
+Constraints:
+
+1. **Teachable SDD** — students and Cursor map API Requirements to a small layout: `routes/`, `controllers/`, `models/`, `authorization/`.
+2. **Same language as tooling** — Node is already used for Vite, Jest, Vitest, and repo scripts (`starter:zip`, Agility, PDF export).
+3. **REST + flat JSON** — matches `api-conventions.mdc` and feature Gherkin (supertest against Express `app`).
+4. **Classroom deploy** — long-running Node process + static SPA is simpler than a heavy application server for this kit.
+5. **ES modules** — `"type": "module"` throughout backend for consistency with modern Node and frontend tooling.
+
+Choosing Java/Spring, .NET, Python/Django, or PHP as the *primary* Speckit API would fork the monorepo story, Cursor rules, and test harness without improving SDD pedagogy for this course stack.
+
+## Decision
+
+Adopt **Node.js** (current LTS suitable for the course, e.g. 24+) with **Express 4** as the HTTP framework for OC CS Speckit APIs:
+
+| Concern | Choice |
+|---------|--------|
+| **Runtime** | Node.js (ES modules — `"type": "module"`) |
+| **HTTP framework** | Express 4 |
+| **API mount** | `/todo/` for the Todo example (starter kit may use `/api/` until renamed) |
+| **Persistence** | Sequelize 6 + `mysql2` ([ADR-0003](./0003-mysql-relational-database.md)) |
+| **Auth** | bcryptjs, JWT, Session table ([ADR-0002](./0002-security-architecture.md)) |
+| **Logging** | winston + morgan |
+| **Tests** | Jest + supertest against exported `app` |
+| **Layout** | `backend/server.js`, `backend/app/{routes,controllers,models,authorization,config}/` |
+
+```text
+Vue SPA (ADR-0004)  ──JSON / Bearer──►  Express (this ADR)
+                                              │
+                                              ├── authenticate middleware
+                                              ├── controllers + routes
+                                              └── Sequelize ──► MySQL (ADR-0003)
+```
+
+**Invariants:**
+
+1. The product API is a **Node + Express** service under `backend/` — not PHP pages or a second backend stack in the same kit.
+2. Routes register through `app/routes/index.js`; `server.js` mounts the API prefix and syncs Sequelize on startup.
+3. Replacing Node/Express (or adding a parallel primary API framework) requires a new ADR and updates to `api-conventions.mdc` / `project-structure.mdc`.
+
+## Consequences
+
+### Positive
+
+- One language across frontend tooling, backend, and Speckit scripts — easier for students and agents.
+- Express middleware model fits authenticate → controller → Sequelize cleanly (ADR-0002).
+- Jest + supertest against `export default app` matches Gherkin API scenarios without a browser.
+- Starter-kit overlay can ship a thin Express shell that features extend route-by-route.
+- Aligns with existing Cursor rules: `api-conventions.mdc`, `auth-patterns.mdc`, `security.mdc`.
+
+### Negative / tradeoffs
+
+- Single-threaded event loop — CPU-heavy work needs care (not a goal of this Todo kit).
+- Students must understand async/await and middleware order.
+- Express is minimal: validation, auth, and structure are **our** conventions (rules + specs), not framework magic.
+- TypeScript is not required by Speckit today — JS + ES modules keeps the teaching surface smaller; adopting TS would be a separate ADR.
+
+## Alternatives considered
+
+| Option | Why not |
+|--------|---------|
+| **Python + FastAPI / Django** | Excellent APIs, but splits language from Vue/Vite/Jest tooling and OC Speckit Node scripts. |
+| **Java + Spring Boot** | Strong enterprise fit; heavier local setup and mental model for feature-sized SDD slices in this course. |
+| **PHP (Laravel / plain)** | Common on XAMPP hosts, but Speckit’s monorepo, Sequelize, and Jest harness are Node-first. |
+| **.NET / ASP.NET Core** | Viable REST stack; outside OC Speckit’s documented Vue + Node teaching path. |
+| **NestJS (Node)** | Structured, but more ceremony than Express for a small Todo API and starter overlay. |
+| **Next.js / Nuxt API routes only** | Couples UI and API deploy; ADR-0001 targets a **separate** Express service and static SPA. |
+
+## Related artifacts
+
+- ADRs: [ADR-0001 — Client–server](./0001-client-server-multi-user-architecture.md), [ADR-0002 — Security](./0002-security-architecture.md), [ADR-0003 — MySQL](./0003-mysql-relational-database.md), [ADR-0004 — Vue](./0004-vue-frontend-framework.md), [ADR-0007 — REST + JSON](./0007-rest-json-api.md), [ADR-0008 — Sequelize](./0008-sequelize-orm.md)
+- Cursor rules: [api-conventions.mdc](../../.cursor/rules/api-conventions.mdc), [project-structure.mdc](../../.cursor/rules/project-structure.mdc), [auth-patterns.mdc](../../.cursor/rules/auth-patterns.mdc), [constitution.mdc](../../.cursor/rules/constitution.mdc) (Principle 5)
+- Implementation: `backend/server.js`, Feature 1+ API Requirements
+- C4: [docs/arch_diagrams/](../arch_diagrams/README.md) (backend container / components)
+- Starter kit: [docs/STARTER-KIT.md](../STARTER-KIT.md) (empty Express shell)
+
+<div style="page-break-after: always;"></div>
+
+<!-- source: docs/adr/0007-rest-json-api.md -->
+
+# 0007-rest-json-api.md
+
+# ADR-0007: REST and flat JSON as the API style
+
+**Status:** Accepted  
+**Date:** 2026-08-26  
+**Deciders:** OC CS Speckit project (SDD kit; Todo example application)
+
+## Context
+
+[ADR-0001](./0001-client-server-multi-user-architecture.md) and [ADR-0006](./0006-node-express-api.md) establish a browser SPA talking to a **Node + Express** backend. Feature specs still need a durable choice for **how** clients and servers exchange data: resource shape, HTTP verbs, and payload format.
+
+Constraints:
+
+1. **Spec-friendly contracts** — API Requirements and Gherkin must describe endpoints, status codes, and bodies without a separate IDL toolchain.
+2. **Flat JSON** — response and request bodies are plain objects/arrays (no `{ success, data }` envelope); errors use `{ "message": "..." }` ([api-conventions.mdc](../../.cursor/rules/api-conventions.mdc)).
+3. **Axios + Vue services** — frontend `*Services.js` modules map 1:1 to REST routes.
+4. **Testability** — Jest + supertest assert status codes and JSON fields against the same contract as the living [api.md](../../features/reference/api.md).
+5. **Teachable SDD** — students learn standard HTTP (GET/POST/PUT/DELETE), not RPC or GraphQL query language, for Features 1–5.
+
+## Decision
+
+Adopt **resource-oriented REST** over HTTP with **JSON** request/response bodies as the Speckit API style:
+
+| Concern | Choice |
+|---------|--------|
+| **Style** | REST (resources + HTTP methods) |
+| **Media type** | `application/json` (`express.json()`) |
+| **Success body** | Flat JSON resource or array — **no** `{ success, data }` wrapper |
+| **Error body** | `{ "message": "..." }` with appropriate 4xx/5xx |
+| **Auth header** | `Authorization: Bearer <token>` on authenticated routes |
+| **Todo mount** | `/todo/` (e.g. `POST /todo/login`, `GET /todo/lists`) |
+| **Docs** | Feature API Requirements + living `features/reference/api.md` |
+
+```text
+Client (axios)                    Express
+─────────────                    ───────
+GET/POST/PUT/DELETE  ──JSON──►  routes → controllers
+Bearer token                     flat JSON out / { message } on error
+```
+
+**Invariants:**
+
+1. New product endpoints follow REST resource paths and HTTP verbs unless a feature ADR explicitly documents an exception.
+2. Controllers return **flat** JSON; do not introduce a global envelope without a new ADR and rule update.
+3. Living reference and Agility-facing API docs describe the same REST/JSON contract.
+
+## Consequences
+
+### Positive
+
+- Feature specs can list routes and JSON fields that map directly to Express routes and Vue services.
+- Widespread student familiarity with REST + JSON; easy to demo in Postman/curl.
+- Supertest and axios share the same mental model; living `api.md` stays short.
+- Aligns with existing Cursor rules and Todo Features 1–5.
+
+### Negative / tradeoffs
+
+- Over-fetching / under-fetching vs GraphQL — acceptable for this small domain.
+- No built-in schema codegen (OpenAPI optional later; not required for Speckit v1).
+- Teams must keep `features/reference/api.md` updated when routes change (DoD).
+
+## Alternatives considered
+
+| Option | Why not |
+|--------|---------|
+| **GraphQL** | Powerful queries, but heavier stack, different testing story, and weaker fit for short Gherkin API scenarios in this course. |
+| **gRPC / protobuf** | Excellent for service-to-service; poor browser/teaching fit without gateways. |
+| **JSON:API / OData envelopes** | Standardized wrappers add ceremony; Speckit prefers flat JSON for clarity. |
+| **`{ success, data }` custom envelope** | Extra nesting in every client and test; rejected in `api-conventions.mdc`. |
+| **HTML form posts / server-rendered only** | Conflicts with Vue SPA + separate API (ADR-0001 / ADR-0004). |
+| **tRPC / RPC-over-HTTP** | Couples client/server types tightly; Speckit keeps language-agnostic REST contracts in Markdown. |
+
+## Related artifacts
+
+- ADRs: [ADR-0001 — Client–server](./0001-client-server-multi-user-architecture.md), [ADR-0006 — Node + Express](./0006-node-express-api.md), [ADR-0002 — Security](./0002-security-architecture.md)
+- Cursor rules: [api-conventions.mdc](../../.cursor/rules/api-conventions.mdc), [frontend-services.mdc](../../.cursor/rules/frontend-services.mdc), [auth-patterns.mdc](../../.cursor/rules/auth-patterns.mdc)
+- Reference: [features/reference/api.md](../../features/reference/api.md)
+- Features: API Requirements in `features/feature-*.md`
+
+<div style="page-break-after: always;"></div>
+
+<!-- source: docs/adr/0008-sequelize-orm.md -->
+
+# 0008-sequelize-orm.md
+
+# ADR-0008: Sequelize as the Node ORM
+
+**Status:** Accepted  
+**Date:** 2026-08-26  
+**Deciders:** OC CS Speckit project (SDD kit; Todo example application)
+
+## Context
+
+[ADR-0003](./0003-mysql-relational-database.md) selects **MySQL** as the relational database and already mentions Sequelize in the stack. [ADR-0006](./0006-node-express-api.md) selects **Node + Express**. Feature specs still need an explicit, durable choice of **how** Node code maps tables to models, associations, and queries.
+
+Constraints:
+
+1. **SDD data model** — Feature **Data Model Requirements** and living [data-model.md](../../features/reference/data-model.md) should map 1:1 to model files under `backend/app/models/`.
+2. **ES modules** — Same `"type": "module"` style as the rest of Speckit.
+3. **Ownership queries** — Easy `where: { userId: req.user.id }` patterns for ADR-0002.
+4. **Classroom sync** — Dev `sync({ alter: true })` and test `sync({ force: true })` without requiring migration files in v1.
+5. **Course continuity** — Speckit Cursor rules (`api-conventions.mdc`) already encode Sequelize model/route patterns.
+
+## Decision
+
+Adopt **Sequelize 6** (with **`mysql2`**) as the ORM for OC CS Speckit backends:
+
+| Concern | Choice |
+|---------|--------|
+| **ORM** | Sequelize 6 |
+| **Driver** | `mysql2` |
+| **Instance** | Shared `sequelizeInstance.js`; models register in `models/index.js` |
+| **Associations** | Defined in models / `index.js` (User–Session, User–List, List–Todo) |
+| **Schema in v1** | Model definitions + `sequelize.sync` (see ADR-0003 for env strategies) |
+| **Queries** | `findOne` / `findAll` / `create` / `update` / `destroy` with explicit `where` |
+
+```text
+feature Data Model Requirements
+        │
+        ▼
+backend/app/models/*.model.js  ──Sequelize──►  MySQL (ADR-0003)
+        ▲
+controllers / auth helpers (userId in WHERE)
+```
+
+**Invariants:**
+
+1. Product persistence for Speckit apps uses Sequelize models — not ad-hoc raw SQL as the primary pattern (raw SQL only if a feature ADR explicitly allows it).
+2. Models import the shared sequelize instance; associations stay centralized so agents do not invent parallel DB access layers.
+3. Replacing Sequelize (e.g. with Prisma) requires a new ADR and updates to `api-conventions.mdc` / project structure.
+
+## Consequences
+
+### Positive
+
+- Models read like the data-model section of a feature spec — good for teaching and Cursor prompts.
+- Associations and FK cascades (e.g. list → todos) are declarative.
+- Fits Express controllers and Jest setup already used in the Todo answer key and starter shell.
+- `unscoped()` / default scopes support hiding password hashes except where bcrypt needs them.
+
+### Negative / tradeoffs
+
+- ORM abstraction can hide inefficient queries if misused (mitigate with simple find patterns in rules).
+- Sequelize 6 vs 7 / TypeScript dialects — Speckit stays on the documented JS + Sequelize 6 path until a new ADR.
+- No first-class checked-in migrations in v1 — production-grade migration discipline is deferred (ADR-0003).
+
+## Alternatives considered
+
+| Option | Why not |
+|--------|---------|
+| **Prisma** | Strong DX and migrations; would rewrite all models, rules, and course materials already Sequelize-based. |
+| **Knex / Objection** | Flexible query builder; less “model file ↔ spec entity” clarity for SDD beginners. |
+| **TypeORM** | Common in Nest/TS stacks; Speckit is JS + Express without requiring TypeScript. |
+| **Raw `mysql2` only** | More boilerplate for associations, sync, and consistent `userId` filters; weaker agent consistency. |
+| **Drizzle** | Modern SQL-first; not the Speckit teaching standard. |
+
+## Related artifacts
+
+- ADRs: [ADR-0003 — MySQL](./0003-mysql-relational-database.md) (engine + schema strategy), [ADR-0006 — Node + Express](./0006-node-express-api.md), [ADR-0002 — Security](./0002-security-architecture.md)
+- Cursor rules: [api-conventions.mdc](../../.cursor/rules/api-conventions.mdc), [project-structure.mdc](../../.cursor/rules/project-structure.mdc)
+- Code: `backend/app/models/`, `backend/app/config/sequelizeInstance.js`, `db.config.js`
+- Reference: [features/reference/data-model.md](../../features/reference/data-model.md)
 
 
 <div style="page-break-after: always;"></div>
