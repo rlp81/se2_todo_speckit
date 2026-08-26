@@ -18,7 +18,7 @@ The stack must work on developer laptops (often XAMPP with MySQL already install
 
 ## Decision
 
-Use **MySQL** as the production database with **Sequelize 6** as the ORM and **relational, normalized tables** scoped by `userId` foreign keys.
+Use **MySQL** as the production database with **Sequelize 6** as the ORM ([ADR-0008](./0008-sequelize-orm.md)) and **relational, normalized tables** scoped by `userId` foreign keys.
 
 ### Stack
 
@@ -106,13 +106,13 @@ No checked-in Sequelize migration files in v1 — schema is defined in `backend/
 | **PostgreSQL** | Excellent choice for production; less universal in XAMPP/LAMP developer environments for this course. |
 | **MongoDB / document store** | Todo-in-list fits poorly without duplicating ownership; cross-user isolation harder to reason about in specs. |
 | **JSON files / in-memory store** | No real multi-user persistence; fails ADR-0001. |
-| **Prisma** | Viable ORM; Sequelize already wired in rules, models, and course materials. |
-| **Raw SQL only (no ORM)** | More boilerplate; Sequelize matches constitution stack consistency. |
+| **Prisma** | Viable ORM; rejected for Speckit in [ADR-0008](./0008-sequelize-orm.md) — Sequelize is the course standard. |
+| **Raw SQL only (no ORM)** | More boilerplate; see ADR-0008. |
 | **Single shared DB for dev and test** | Risk of wiping developer data when tests run `force: true`. |
 
 ## Related artifacts
 
-- ADRs: [ADR-0001](./0001-client-server-multi-user-architecture.md), [ADR-0002](./0002-security-architecture.md)
+- ADRs: [ADR-0001](./0001-client-server-multi-user-architecture.md), [ADR-0002](./0002-security-architecture.md), [ADR-0006](./0006-node-express-api.md), [ADR-0008](./0008-sequelize-orm.md)
 - Reference: [data-model.md](../../features/reference/data-model.md)
 - Cursor rules: [api-conventions.mdc](../../.cursor/rules/api-conventions.mdc), [project-structure.mdc](../../.cursor/rules/project-structure.mdc)
 - Config: `backend/app/config/db.config.js`, `backend/.env.example`, `backend/.env.test.example`

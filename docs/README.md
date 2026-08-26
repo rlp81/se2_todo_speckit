@@ -46,7 +46,7 @@ Generated exports are safe to regenerate; do not treat them as the source of tru
 
 ### Architecture
 
-- [ADR index](./adr/README.md) — ADR-0001 client/server · ADR-0002 security · ADR-0003 MySQL  
+- [ADR index](./adr/README.md) — ADR-0001 client/server · ADR-0002 security · ADR-0003 MySQL · ADR-0004 Vue · ADR-0005 Vuetify · ADR-0006 Node/Express · ADR-0007 REST/JSON · ADR-0008 Sequelize  
 - [Writing ADRs](./adr/writing-adrs.md) — student guide (when, naming, principles)  
 - [C4 diagrams](./arch_diagrams/README.md) — context, container, components, deployment  
 

@@ -3,7 +3,7 @@
 A student guide for deciding **when** to write an ADR, **how to name and structure** it, and **how to keep it linked** to features and Cursor rules.
 
 **Index & template:** [README.md](./README.md)  
-**Examples in this repo:** [ADR-0001](./0001-client-server-multi-user-architecture.md) (client–server), [ADR-0002](./0002-security-architecture.md) (security), [ADR-0003](./0003-mysql-relational-database.md) (MySQL)  
+**Examples in this repo:** [ADR-0001](./0001-client-server-multi-user-architecture.md) (client–server), [ADR-0002](./0002-security-architecture.md) (security), [ADR-0003](./0003-mysql-relational-database.md) (MySQL), [ADR-0004](./0004-vue-frontend-framework.md) (Vue 3), [ADR-0005](./0005-vuetify-ui-library.md) (Vuetify 4), [ADR-0006](./0006-node-express-api.md) (Node + Express), [ADR-0007](./0007-rest-json-api.md) (REST + JSON), [ADR-0008](./0008-sequelize-orm.md) (Sequelize)  
 **Related:** [features/framework.md](../../features/framework.md) · [writing feature requirements](../../features/writing-feature-requirements.md) · [writing feature design](../../features/writing-feature-design.md)
 
 ---
@@ -47,6 +47,11 @@ ADRs outlive a single feature. Feature 2 and Feature 5 both rely on ADR-0001’s
 | **0001** Client–server multi-user | Affects every feature: SPA vs server truth, `/todo/`, JWT+session, monorepo |
 | **0002** Layered security | Trust boundary, `404` vs `403`, bcrypt, “API enforces / UI is UX only” |
 | **0003** MySQL relational DB | Engine + Sequelize + separate test DB — not “add lists table” (that is Feature 2) |
+| **0004** Vue 3 frontend | SPA framework + Vite/Vuetify path — not “add Login.vue” (that is Feature 1) |
+| **0005** Vuetify 4 UI library | Component/theming system — not “use a maroon button on Login” (Screen Requirements + ui-style rule) |
+| **0006** Node + Express API | Runtime and HTTP framework — not “add POST /todo/login” (that is Feature 1) |
+| **0007** REST + flat JSON | API style and payload shape — not “lists return title and id” (feature API Requirements) |
+| **0008** Sequelize ORM | How Node maps to MySQL models — not “add lists table columns” (feature data model + ADR-0003) |
 
 **Not ADRs:** “User can create a list” (Feature 2 story), “use `oc-cta` on primary buttons” (ui-style rule), “p95 &lt; 200 ms” (NFR row).
 
