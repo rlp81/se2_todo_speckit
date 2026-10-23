@@ -26,6 +26,6 @@
     "reset:example": "node scripts/reset-example-app.mjs"
   },
   "devDependencies": {
-    "md-mermaid-pdf": "^0.1.7"
+    "md-mermaid-pdf": "^0.1.1"
   }
 }
